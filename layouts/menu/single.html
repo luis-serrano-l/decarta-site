@@ -1,7 +1,7 @@
 {{- define "main" }}
     {{- $path := .RelPermalink }}
     {{- $hasHash := false }}
-    {{- if or (findRE "/menu/[A-Za-z0-9]{13,}" $path) (findRE "\\?hash=" $path) }}
+    {{- if or (findRE "/menu/[A-Za-z0-9]{17}$" $path) (findRE "\\?hash=" $path) }}
         {{- $hasHash = true }}
     {{- end }}
     <div class="container">

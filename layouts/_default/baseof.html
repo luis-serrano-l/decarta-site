@@ -12,8 +12,8 @@
     </main>
     {{ partial "footer.html" . }}
     <script>
-        // Set bot API URL from Hugo config
-        window.BOT_API_URL = {{ if .Site.Params.botApiUrl }}"{{ .Site.Params.botApiUrl }}"{{ else }}""{{ end }};
+        // Published menus are static files in this site: menus/<id>.json
+        window.MENUS_BASE_URL = {{ "menus/" | relURL }};
     </script>
     <script src="{{ "js/menu.js" | relURL }}"></script>
 </body>

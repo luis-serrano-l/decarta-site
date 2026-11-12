@@ -1,67 +1,50 @@
-// Menu filtering functionality and hash-based routing
+// Menu filtering functionality and id-based routing (/menu/{id})
 document.addEventListener('DOMContentLoaded', function() {
-    // Check for hash in URL (path-based: /menu/{hash} or query: ?hash=abc123)
+    // Menu ids are issued by demenu_bot: exactly 17 base62 characters.
+    // Anything else is rejected, so the id can never alter the fetch path.
+    const MENU_ID = /^[A-Za-z0-9]{17}$/;
+
+    // Read the id from /menu/{id} (primary format) or ?hash={id}
     function getHashFromURL() {
-        // Check query parameter first
-        const urlParams = new URLSearchParams(window.location.search);
-        const hashParam = urlParams.get('hash');
+        const hashParam = new URLSearchParams(window.location.search).get('hash');
         if (hashParam) {
-            return hashParam;
+            return MENU_ID.test(hashParam) ? hashParam : null;
         }
-        
-        // Check for /menu/{hash} pattern (primary format)
+
         const pathParts = window.location.pathname.split('/').filter(p => p);
         const menuIndex = pathParts.indexOf('menu');
         if (menuIndex !== -1 && pathParts.length > menuIndex + 1) {
             const hash = pathParts[menuIndex + 1];
-            // Validate it looks like a hash (Base62 encoding, 13+ chars)
-            // Base62 uses A-Za-z0-9 characters
-            if (hash.length >= 13 && /^[A-Za-z0-9]+$/.test(hash)) {
+            if (MENU_ID.test(hash)) {
                 return hash;
             }
         }
-        
+
         return null;
     }
-    
+
     const hash = getHashFromURL();
-    const botApiUrl = window.BOT_API_URL || ''; // Configurable via Hugo config
-    
-    // If hash is present, fetch data from bot API (NOT from static menu.json)
+    // Published menus live in this site at menus/<id>.json (static/menus in
+    // the repository). The base path is set by the layout from Hugo's baseURL.
+    const menusBaseUrl = window.MENUS_BASE_URL || '/menus/';
+
+    // If an id is present, fetch that menu (NOT the static default menu)
     if (hash) {
         const menuStatic = document.getElementById('menu-static');
         const menuDynamic = document.getElementById('menu-dynamic');
         const menuLoading = document.getElementById('menu-loading');
         const menuError = document.getElementById('menu-error');
-        
-        // Hide static menu (if it exists) - we don't want to load static menu.json when hash is present
-        // Show loading state instead
+
+        // Hide the static menu (if it exists) and show the loading state
         if (menuStatic) {
             menuStatic.style.display = 'none';
-            // Clear any content to prevent static menu from being processed
             menuStatic.innerHTML = '';
         }
         if (menuLoading) menuLoading.style.display = 'block';
         if (menuError) menuError.style.display = 'none';
-        
-        if (!botApiUrl) {
-            // Bot API URL not configured
-            if (menuLoading) menuLoading.style.display = 'none';
-            if (menuError) {
-                menuError.style.display = 'block';
-                menuError.innerHTML = '<p><strong>Error:</strong> Bot API URL not configured.</p><p>Please configure <code>botApiUrl</code> in your Hugo config file.</p>';
-            }
-            return;
-        }
-        
-        const menuUrl = `${botApiUrl}/api/user/${hash}/menu.json`;
-        
-        // Log to console for debugging (not exposed to users)
-        console.log('Fetching menu data...');
-        console.log('Hash:', hash);
-        console.log('Bot API URL:', botApiUrl);
-        console.log('Full URL:', menuUrl);
-        
+
+        const menuUrl = `${menusBaseUrl}${hash}.json`;
+
         // Add timeout to fetch (10 seconds for better reliability)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
@@ -74,12 +57,11 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Accept': 'application/json',
             },
-            mode: 'cors'
+            // Revalidate so a re-published menu shows up promptly
+            cache: 'no-cache'
         })
             .then(response => {
                 clearTimeout(timeoutId);
-                console.log('Response status:', response.status);
-                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
                 if (!response.ok) {
                     // Log full error details for debugging
                     console.error('Response not OK:', response.status, response.statusText);
@@ -92,7 +74,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
-                console.log('Menu loaded successfully');
                 if (menuLoading) menuLoading.style.display = 'none';
                 if (menuError) menuError.style.display = 'none';
                 
@@ -144,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderDynamicMenu(data, container) {
         if (!container) return;
         
-        if (!data.categories || data.categories.length === 0) {
+        if (!data || !Array.isArray(data.categories) || data.categories.length === 0) {
             container.innerHTML = '<p>No menu data available.</p>';
             container.style.display = 'block';
             return;
@@ -181,13 +162,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             html += '<div class="menu-items">';
             
-            category.items.forEach(item => {
+            (category.items || []).forEach(item => {
                 html += '<div class="menu-item">';
                 html += `<h3 class="item-name">${escapeHtml(item.name)}</h3>`;
                 if (item.description) {
                     html += `<p class="item-description">${escapeHtml(item.description)}</p>`;
                 }
-                html += `<span class="item-price">$${parseFloat(item.price).toFixed(2)}</span>`;
+                html += `<span class="item-price">$${(Number(item.price) || 0).toFixed(2)}</span>`;
                 html += '</div>';
             });
             
@@ -200,10 +181,11 @@ document.addEventListener('DOMContentLoaded', function() {
         container.style.display = 'block';
     }
     
+    // Escapes for both element content and quoted attribute values
+    // (category ids are written into data-category="...").
     function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        const escapes = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+        return String(text == null ? '' : text).replace(/[&<>"']/g, ch => escapes[ch]);
     }
     
     function initializeMenuFiltering() {

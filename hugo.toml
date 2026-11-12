@@ -17,12 +17,8 @@ buildFuture = false
   menuTitle = "Our Menu"
   restaurantName = "Delicious Restaurant"
   tagline = "Fresh ingredients, amazing flavors"
-  # Bot API URL for fetching user-specific menus
-  # Set this to your bot API endpoint (required for /menu/{hash} routes to work)
-  # For local development: botApiUrl = "http://localhost:8080"
-  # For production: botApiUrl = "https://your-bot-api.example.com"
-  # Leave empty or unset if you only want to use the default menu at /menu
-  botApiUrl = "http://localhost:8080"
+  # User menus are published by demenu_bot to static/menus/<id>.json in this
+  # repository and served from /menus/<id>.json; no API URL is needed.
 
 [menu]
   [[menu.main]]

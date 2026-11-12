@@ -20,13 +20,8 @@ buildFuture = false
   menuTitle = "Our Menu"
   restaurantName = "Delicious Restaurant"
   tagline = "Fresh ingredients, amazing flavors"
-  # Bot API URL - Set this to your production bot API endpoint (required for /menu/{hash} routes)
-  # This is the URL where your demenu_bot is running and accessible
-  # Example: botApiUrl = "https://your-bot-api.example.com"
-  # For local development: botApiUrl = "http://localhost:8080"
-  # IMPORTANT: Update this with your actual bot API URL before deploying
-  # The endpoint should be publicly accessible and serve JSON at /api/user/:hash/menu.json
-  botApiUrl = "https://demenubot-production.up.railway.app"
+  # User menus are published by demenu_bot to static/menus/<id>.json in this
+  # repository and served from /menus/<id>.json; no API URL is needed.
 
 [menu]
   [[menu.main]]

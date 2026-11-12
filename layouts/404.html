@@ -22,13 +22,13 @@
     </main>
     {{ partial "footer.html" . }}
     <script>
-        // Set bot API URL from Hugo config
-        window.BOT_API_URL = {{ if .Site.Params.botApiUrl }}"{{ .Site.Params.botApiUrl }}"{{ else }}""{{ end }};
+        // Published menus are static files in this site: menus/<id>.json
+        window.MENUS_BASE_URL = {{ "menus/" | relURL }};
         
         // Check if this is a menu route - if not, show 404 immediately
         (function() {
             const path = window.location.pathname;
-            const menuMatch = path.match(/\/menu\/([^\/]+)$/);
+            const menuMatch = path.match(/\/menu\/[A-Za-z0-9]{17}\/?$/);
             if (!menuMatch) {
                 // Not a menu route - show 404
                 document.addEventListener('DOMContentLoaded', function() {
