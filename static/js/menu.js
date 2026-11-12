@@ -163,13 +163,21 @@ document.addEventListener('DOMContentLoaded', function() {
             html += '<div class="menu-items">';
             
             (category.items || []).forEach(item => {
+                // Same markup as layouts/partials/meal.html
                 html += '<div class="menu-item">';
+                const imageUrl = resolveImageUrl(item.image);
+                if (imageUrl) {
+                    html += `<div class="menu-item-image"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(item.name)}" loading="lazy" referrerpolicy="no-referrer"></div>`;
+                }
+                html += '<div class="menu-item-content">';
+                html += '<div class="menu-item-header">';
                 html += `<h3 class="item-name">${escapeHtml(item.name)}</h3>`;
+                html += `<span class="item-price">$${(Number(item.price) || 0).toFixed(2)}</span>`;
+                html += '</div>';
                 if (item.description) {
                     html += `<p class="item-description">${escapeHtml(item.description)}</p>`;
                 }
-                html += `<span class="item-price">$${(Number(item.price) || 0).toFixed(2)}</span>`;
-                html += '</div>';
+                html += '</div></div>';
             });
             
             html += '</div></section>';
@@ -181,6 +189,31 @@ document.addEventListener('DOMContentLoaded', function() {
         container.style.display = 'block';
     }
     
+    // Returns a safe src for an item image, or null. Mirrors the bot's rule:
+    // an https:// URL, or a site-relative path such as /images/x.jpg, which
+    // is resolved against the site root (e.g. /demenu/ on GitHub Pages).
+    function resolveImageUrl(image) {
+        if (typeof image !== 'string' || image === '' || image.length > 2048) {
+            return null;
+        }
+        if (image.startsWith('/')) {
+            if (image.startsWith('//') || image.includes('\\') || image.split('/').includes('..')) {
+                return null;
+            }
+            const siteRoot = menusBaseUrl.replace(/menus\/$/, '');
+            return siteRoot + image.slice(1);
+        }
+        try {
+            const url = new URL(image);
+            if (url.protocol !== 'https:' || !url.hostname || url.username || url.password) {
+                return null;
+            }
+            return url.href;
+        } catch (e) {
+            return null;
+        }
+    }
+
     // Escapes for both element content and quoted attribute values
     // (category ids are written into data-category="...").
     function escapeHtml(text) {
