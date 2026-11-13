@@ -1,343 +1,409 @@
-// Menu filtering functionality and id-based routing (/menu/{id})
-document.addEventListener('DOMContentLoaded', function() {
-    // Menu ids are issued by demenu_bot: exactly 17 base62 characters.
-    // Anything else is rejected, so the id can never alter the fetch path.
-    const MENU_ID = /^[A-Za-z0-9]{17}$/;
+/*
+ * Loads a published menu for /menu/<id> and keeps the category navigation
+ * in step with scrolling.
+ *
+ * Menu files are written by demenu-bot from what restaurant owners send it,
+ * so their content is untrusted. Everything is rendered with createElement
+ * and textContent; no markup is ever parsed from menu data.
+ */
+(function () {
+    'use strict';
 
-    // Read the id from /menu/{id} (primary format) or ?hash={id}
-    function getHashFromURL() {
-        const hashParam = new URLSearchParams(window.location.search).get('hash');
-        if (hashParam) {
-            return MENU_ID.test(hashParam) ? hashParam : null;
-        }
+    // Ids are base62 and 16 to 32 characters long. Checking the shape first
+    // means an id can never change the path that is fetched.
+    var MENU_ID = /^[A-Za-z0-9]{16,32}$/;
+    var MENU_PATH = /\/menu\/([^/]+)\/?$/;
+    var FETCH_TIMEOUT_MS = 10000;
 
-        const pathParts = window.location.pathname.split('/').filter(p => p);
-        const menuIndex = pathParts.indexOf('menu');
-        if (menuIndex !== -1 && pathParts.length > menuIndex + 1) {
-            const hash = pathParts[menuIndex + 1];
-            if (MENU_ID.test(hash)) {
-                return hash;
-            }
-        }
+    // Upper bounds from the bot's schema, enforced again here.
+    var MAX_CATEGORIES = 50;
+    var MAX_ITEMS = 200;
+    var MAX_NAME = 100;
+    var MAX_TEXT = 500;
+    var MAX_BADGES = 6;
+    var MAX_URL = 2048;
 
-        return null;
+    var SPICE_LEVELS = ['Mild', 'Medium', 'Hot'];
+
+    function el(tag, className, text) {
+        var node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
     }
 
-    const hash = getHashFromURL();
-    // Published menus live in this site at menus/<id>.json (static/menus in
-    // the repository). The base path is set by the layout from Hugo's baseURL.
-    const menusBaseUrl = window.MENUS_BASE_URL || '/menus/';
-
-    // If an id is present, fetch that menu (NOT the static default menu)
-    if (hash) {
-        const menuStatic = document.getElementById('menu-static');
-        const menuDynamic = document.getElementById('menu-dynamic');
-        const menuLoading = document.getElementById('menu-loading');
-        const menuError = document.getElementById('menu-error');
-
-        // Hide the static menu (if it exists) and show the loading state
-        if (menuStatic) {
-            menuStatic.style.display = 'none';
-            menuStatic.innerHTML = '';
-        }
-        if (menuLoading) menuLoading.style.display = 'block';
-        if (menuError) menuError.style.display = 'none';
-
-        const menuUrl = `${menusBaseUrl}${hash}.json`;
-
-        // Add timeout to fetch (10 seconds for better reliability)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-            console.log('Request timeout - aborting fetch after 10 seconds');
-            controller.abort();
-        }, 10000); // 10 second timeout
-        
-        fetch(menuUrl, {
-            signal: controller.signal,
-            headers: {
-                'Accept': 'application/json',
-            },
-            // Revalidate so a re-published menu shows up promptly
-            cache: 'no-cache'
-        })
-            .then(response => {
-                clearTimeout(timeoutId);
-                if (!response.ok) {
-                    // Log full error details for debugging
-                    console.error('Response not OK:', response.status, response.statusText);
-                    // Don't expose HTTP status details to users
-                    if (response.status === 404) {
-                        throw new Error('NOT_FOUND');
-                    }
-                    throw new Error('SERVER_ERROR');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (menuLoading) menuLoading.style.display = 'none';
-                if (menuError) menuError.style.display = 'none';
-                
-                // Render menu dynamically
-                renderDynamicMenu(data, menuDynamic);
-                
-                // Initialize filtering after menu is rendered
-                setTimeout(initializeMenuFiltering, 100);
-            })
-            .catch(error => {
-                clearTimeout(timeoutId);
-                // Log error details to console for debugging (not exposed to users)
-                console.error('Error loading menu:', error);
-                console.error('Error name:', error.name);
-                console.error('Error message:', error.message);
-                console.error('Error stack:', error.stack);
-                if (menuLoading) menuLoading.style.display = 'none';
-                if (menuError) {
-                    menuError.style.display = 'block';
-                    let errorMsg = 'Unable to load menu. Please check your link and try again.';
-                    if (error.name === 'AbortError') {
-                        errorMsg = 'Request timed out. Please try again.';
-                    } else if (error.message === 'NOT_FOUND') {
-                        errorMsg = 'Menu not found. Please check your link.';
-                    } else if (error.message === 'SERVER_ERROR') {
-                        errorMsg = 'Unable to load menu. Please try again later.';
-                    } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-                        errorMsg = 'Unable to connect. Please try again later.';
-                    }
-                    menuError.innerHTML = `<p><strong>Error loading menu:</strong> ${errorMsg}</p><p style="font-size: 0.9em; color: #666;">Check browser console (F12) for details.</p>`;
-                }
-            });
-    } else {
-        // No hash - use static menu (default menu at /menu)
-        // Make sure static menu is visible
-        const menuStatic = document.getElementById('menu-static');
-        if (menuStatic) {
-            menuStatic.style.display = 'block';
-        }
-        // Hide loading and error elements
-        const menuLoading = document.getElementById('menu-loading');
-        const menuError = document.getElementById('menu-error');
-        if (menuLoading) menuLoading.style.display = 'none';
-        if (menuError) menuError.style.display = 'none';
-        // Initialize filtering for static menu
-        initializeMenuFiltering();
+    // A trimmed string of at most max characters, or '' for anything else.
+    function clean(value, max) {
+        if (typeof value !== 'string') return '';
+        return value.trim().slice(0, max);
     }
-    
-    function renderDynamicMenu(data, container) {
-        if (!container) return;
-        
-        if (!data || !Array.isArray(data.categories) || data.categories.length === 0) {
-            container.innerHTML = '<p>No menu data available.</p>';
-            container.style.display = 'block';
-            return;
-        }
-        
-        // Build menu HTML (same structure as static menu)
-        let html = '<div class="menu-container">';
-        
-        // Sidebar with filters
-        html += '<button class="sidebar-toggle sidebar-toggle-external" aria-label="Toggle categories"><span class="toggle-icon">☰</span></button>';
-        html += '<div class="sidebar-overlay"></div>';
-        html += '<div class="menu-sidebar">';
-        html += '<div class="sidebar-header">';
-        html += '<button class="sidebar-toggle sidebar-toggle-internal" aria-label="Toggle categories"><span class="toggle-icon">☰</span></button>';
-        html += '<button class="sidebar-close" aria-label="Close sidebar">×</button>';
-        html += '</div>';
-        html += '<div class="menu-filters">';
-        html += '<button class="filter-btn active" data-category="all">All</button>';
-        
-        data.categories.forEach(category => {
-            html += `<button class="filter-btn" data-category="${escapeHtml(category.id)}">${escapeHtml(category.name)}</button>`;
-        });
-        
-        html += '</div></div>';
-        
-        // Menu content
-        html += '<div class="menu-content"><div class="menu-categories">';
-        
-        data.categories.forEach(category => {
-            html += `<section class="menu-category" data-category="${escapeHtml(category.id)}">`;
-            html += `<h2 class="category-title">${escapeHtml(category.name)}</h2>`;
-            if (category.description) {
-                html += `<p class="category-description">${escapeHtml(category.description)}</p>`;
-            }
-            html += '<div class="menu-items">';
-            
-            (category.items || []).forEach(item => {
-                // Same markup as layouts/partials/meal.html
-                html += '<div class="menu-item">';
-                const imageUrl = resolveImageUrl(item.image);
-                if (imageUrl) {
-                    html += `<div class="menu-item-image"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(item.name)}" loading="lazy" referrerpolicy="no-referrer"></div>`;
-                }
-                html += '<div class="menu-item-content">';
-                html += '<div class="menu-item-header">';
-                html += `<h3 class="item-name">${escapeHtml(item.name)}</h3>`;
-                html += `<span class="item-price">$${(Number(item.price) || 0).toFixed(2)}</span>`;
-                html += '</div>';
-                if (item.description) {
-                    html += `<p class="item-description">${escapeHtml(item.description)}</p>`;
-                }
-                html += '</div></div>';
-            });
-            
-            html += '</div></section>';
-        });
-        
-        html += '</div></div></div>';
-        
-        container.innerHTML = html;
-        container.style.display = 'block';
+
+    // Reads the id from /menu/<id>, or from ?hash=<id> for older links.
+    // Returns { id } when the shape is valid, { id: null } for a menu URL
+    // with a malformed id, and null when the URL is not a menu URL at all.
+    function readMenuId(location) {
+        var fromQuery = new URLSearchParams(location.search).get('hash');
+        var match = MENU_PATH.exec(location.pathname);
+        var candidate = fromQuery !== null ? fromQuery : match && match[1];
+        if (candidate === null) return null;
+        return { id: MENU_ID.test(candidate) ? candidate : null };
     }
-    
-    // Returns a safe src for an item image, or null. Mirrors the bot's rule:
-    // an https:// URL, or a site-relative path such as /images/x.jpg, which
-    // is resolved against the site root (e.g. /demenu/ on GitHub Pages).
-    function resolveImageUrl(image) {
-        if (typeof image !== 'string' || image === '' || image.length > 2048) {
-            return null;
-        }
-        if (image.startsWith('/')) {
-            if (image.startsWith('//') || image.includes('\\') || image.split('/').includes('..')) {
-                return null;
-            }
-            const siteRoot = menusBaseUrl.replace(/menus\/$/, '');
+
+    // A safe image src, or null. Only two forms are allowed: an https URL
+    // with a host and no credentials, or a site-relative path such as
+    // /images/soup.jpg, resolved against the site root.
+    function resolveImageUrl(image, siteRoot) {
+        if (typeof image !== 'string' || image === '' || image.length > MAX_URL) return null;
+        if (/[\s\\]/.test(image)) return null;
+        if (image.charAt(0) === '/') {
+            if (image.charAt(1) === '/' || image.split('/').indexOf('..') !== -1) return null;
             return siteRoot + image.slice(1);
         }
+        if (image.slice(0, 8).toLowerCase() !== 'https://') return null;
         try {
-            const url = new URL(image);
-            if (url.protocol !== 'https:' || !url.hostname || url.username || url.password) {
-                return null;
-            }
+            var url = new URL(image);
+            if (url.protocol !== 'https:' || !url.hostname || url.username || url.password) return null;
             return url.href;
-        } catch (e) {
+        } catch (error) {
             return null;
         }
     }
 
-    // Escapes for both element content and quoted attribute values
-    // (category ids are written into data-category="...").
-    function escapeHtml(text) {
-        const escapes = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-        return String(text == null ? '' : text).replace(/[&<>"']/g, ch => escapes[ch]);
-    }
-    
-    function initializeMenuFiltering() {
-        const filterButtons = document.querySelectorAll('.filter-btn');
-        const menuCategories = document.querySelectorAll('.menu-category');
-        const sidebar = document.querySelector('.menu-sidebar');
-        const sidebarToggles = document.querySelectorAll('.sidebar-toggle');
-        const sidebarClose = document.querySelector('.sidebar-close');
-        const sidebarOverlay = document.querySelector('.sidebar-overlay');
-    
-    function isMobile() {
-        return window.innerWidth <= 768;
-    }
-    
-    // Toggle sidebar on mobile
-    function openSidebar() {
-        if (sidebar && isMobile()) {
-            sidebar.classList.add('open');
-            if (sidebarOverlay) {
-                sidebarOverlay.classList.add('active');
-            }
-            document.body.style.overflow = 'hidden';
+    function dietaryLabels(value) {
+        var list = Array.isArray(value) ? value : [value];
+        var labels = [];
+        for (var i = 0; i < list.length && labels.length < MAX_BADGES; i++) {
+            var label = clean(list[i], MAX_NAME);
+            if (label) labels.push(label);
         }
+        return labels;
     }
-    
-    function closeSidebar() {
-        if (sidebar) {
-            sidebar.classList.remove('open');
-            if (sidebarOverlay) {
-                sidebarOverlay.classList.remove('active');
-            }
-            document.body.style.overflow = '';
+
+    // Accepts a label ("Hot"), a level from 1 to 3, or true.
+    function spicyLabel(value) {
+        if (value === true) return 'Spicy';
+        if (typeof value === 'number') return SPICE_LEVELS[value - 1] || '';
+        return clean(value, MAX_NAME);
+    }
+
+    // The icon for a dietary label, chosen by keyword so that Spanish and
+    // English labels both match: leaf for vegan and vegetarian, wheat for
+    // gluten. Other labels get no icon.
+    function dietaryIcon(label) {
+        var text = label.toLowerCase();
+        if (/vegan|veget|plant/.test(text)) return 'leaf';
+        if (text.indexOf('gluten') !== -1) return 'wheat';
+        return '';
+    }
+
+    // How many chillies a spicy badge shows, from 1 to 3.
+    function spiceLevel(value, label) {
+        if (typeof value === 'number') return Math.min(3, Math.max(1, Math.round(value)));
+        var text = label.toLowerCase();
+        if (/hot|extra|very|muy/.test(text)) return 3;
+        if (/medium|medio/.test(text)) return 2;
+        return 1;
+    }
+
+    function badge(kind, label, icon, count) {
+        var node = el('li', 'badge badge--' + kind);
+        for (var i = 0; icon && i < count; i++) {
+            var mark = el('span', 'badge__icon badge__icon--' + icon);
+            mark.setAttribute('aria-hidden', 'true');
+            node.appendChild(mark);
         }
+        node.appendChild(document.createTextNode(label));
+        return node;
     }
-    
-    function toggleSidebar() {
-        if (sidebar && isMobile()) {
-            if (sidebar.classList.contains('open')) {
-                closeSidebar();
-            } else {
-                openSidebar();
-            }
-        }
+
+    function formatPrice(price, currency) {
+        if (typeof price !== 'number' || !isFinite(price) || price < 0) return '';
+        return currency + price.toFixed(2);
     }
-    
-    sidebarToggles.forEach(toggle => {
-        toggle.addEventListener('click', toggleSidebar);
-    });
-    
-    if (sidebarClose) {
-        sidebarClose.addEventListener('click', closeSidebar);
-    }
-    
-    if (sidebarOverlay) {
-        sidebarOverlay.addEventListener('click', closeSidebar);
-    }
-    
-    // Close sidebar when clicking a filter button on mobile
-    filterButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const category = this.getAttribute('data-category');
-            
-            // Update active button
-            filterButtons.forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Filter categories
-            menuCategories.forEach(categorySection => {
-                if (category === 'all') {
-                    categorySection.classList.remove('hidden');
-                } else {
-                    const categoryId = categorySection.getAttribute('data-category');
-                    if (categoryId === category) {
-                        categorySection.classList.remove('hidden');
-                    } else {
-                        categorySection.classList.add('hidden');
-                    }
-                }
+
+    function renderDish(item, config) {
+        var name = item && typeof item === 'object' ? clean(item.name, MAX_NAME) : '';
+        if (!name) return null;
+
+        var dish = el('li', 'dish');
+
+        var src = resolveImageUrl(item.image, config.siteRoot);
+        if (src) {
+            var frame = el('div', 'dish__image');
+            var img = el('img');
+            img.alt = '';
+            img.width = 110;
+            img.height = 110;
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            img.referrerPolicy = 'no-referrer';
+            img.addEventListener('error', function () {
+                frame.remove();
             });
-            
-            // Close sidebar on mobile after selecting a category
-            if (isMobile()) {
-                closeSidebar();
-            }
-            
-            // Scroll to category after filtering
-            setTimeout(() => {
-                if (category !== 'all') {
-                    const targetCategory = document.querySelector(`.menu-category[data-category="${category}"]:not(.hidden)`);
-                    if (targetCategory) {
-                        const offset = isMobile() ? 20 : 100;
-                        const categoryTop = targetCategory.getBoundingClientRect().top + window.pageYOffset;
-                        window.scrollTo({
-                            top: categoryTop - offset,
-                            behavior: 'smooth'
-                        });
-                    }
-                } else {
-                    const menuContent = document.querySelector('.menu-content');
-                    if (menuContent) {
-                        const menuContentTop = menuContent.getBoundingClientRect().top + window.pageYOffset;
-                        const offset = isMobile() ? 20 : 100;
-                        window.scrollTo({
-                            top: menuContentTop - offset,
-                            behavior: 'smooth'
-                        });
-                    } else {
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }
-                }
-            }, 50);
-        });
-    });
-    
-        // Handle window resize
-        window.addEventListener('resize', function() {
-            if (window.innerWidth > 768) {
-                closeSidebar();
-            }
-        });
+            img.src = src;
+            frame.appendChild(img);
+            dish.appendChild(frame);
+        }
+
+        var body = el('div', 'dish__body');
+        var heading = el('div', 'dish__heading');
+        heading.appendChild(el('h3', 'dish__name', name));
+        var price = formatPrice(item.price, config.currency);
+        if (price) {
+            var leader = el('span', 'dish__leader');
+            leader.setAttribute('aria-hidden', 'true');
+            heading.appendChild(leader);
+            heading.appendChild(el('span', 'dish__price', price));
+        }
+        body.appendChild(heading);
+
+        var description = clean(item.description, MAX_TEXT);
+        if (description) body.appendChild(el('p', 'dish__description', description));
+
+        var dietary = dietaryLabels(item.dietary);
+        var spicy = spicyLabel(item.spicy);
+        if (dietary.length || spicy) {
+            var badges = el('ul', 'badges');
+            dietary.forEach(function (label) {
+                badges.appendChild(badge('dietary', label, dietaryIcon(label), 1));
+            });
+            if (spicy) badges.appendChild(badge('spicy', spicy, 'chilli', spiceLevel(item.spicy, spicy)));
+            body.appendChild(badges);
+        }
+
+        dish.appendChild(body);
+        return dish;
     }
-});
+
+    // Builds the same markup as layouts/partials/menu.html. Returns null
+    // when there is no dish to show anywhere in the menu.
+    function renderMenu(data, config) {
+        var categories = data && Array.isArray(data.categories) ? data.categories.slice(0, MAX_CATEGORIES) : [];
+        var menu = el('div', 'menu');
+        var nav = el('nav', 'menu-nav');
+        nav.setAttribute('aria-label', 'Menu sections');
+        var navList = el('ul', 'menu-nav__list');
+        var sections = el('div', 'menu-sections');
+        var dishCount = 0;
+
+        categories.forEach(function (category) {
+            var name = category && typeof category === 'object' ? clean(category.name, MAX_NAME) : '';
+            if (!name) return;
+
+            // Section ids are numbered here; the ids in the file are not used.
+            var id = 'section-' + (sections.childElementCount + 1);
+            var section = el('section', 'menu-section');
+            section.id = id;
+            section.setAttribute('aria-labelledby', id + '-title');
+            var title = el('h2', 'menu-section__title', name);
+            title.id = id + '-title';
+            section.appendChild(title);
+
+            var description = clean(category.description, MAX_TEXT);
+            if (description) section.appendChild(el('p', 'menu-section__description', description));
+
+            var list = el('ul', 'dish-list');
+            var items = Array.isArray(category.items) ? category.items.slice(0, MAX_ITEMS) : [];
+            items.forEach(function (item) {
+                var dish = renderDish(item, config);
+                if (dish) list.appendChild(dish);
+            });
+            if (list.childElementCount) {
+                dishCount += list.childElementCount;
+                section.appendChild(list);
+            } else {
+                section.appendChild(el('p', 'menu-section__empty', 'No dishes in this section yet.'));
+            }
+            sections.appendChild(section);
+
+            var navItem = el('li');
+            var link = el('a', 'menu-nav__link', name);
+            link.href = '#' + id;
+            navItem.appendChild(link);
+            navList.appendChild(navItem);
+        });
+
+        if (dishCount === 0) return null;
+        nav.appendChild(navList);
+        menu.appendChild(nav);
+        menu.appendChild(sections);
+        return menu;
+    }
+
+    function renderNotice(notice) {
+        var box = el('div', 'notice');
+        var title = el('h2', 'notice__title', notice.title);
+        title.tabIndex = -1;
+        box.appendChild(title);
+        box.appendChild(el('p', 'notice__body', notice.body));
+        if (notice.action) {
+            var action;
+            if (notice.action.href) {
+                action = el('a', 'notice__action', notice.action.label);
+                action.href = notice.action.href;
+            } else {
+                action = el('button', 'notice__action', notice.action.label);
+                action.type = 'button';
+                action.addEventListener('click', notice.action.onClick);
+            }
+            box.appendChild(action);
+        }
+        return box;
+    }
+
+    // Marks the link of the section being read, slides a filled pill behind
+    // it, and on narrow screens keeps it in view inside the scrolling bar.
+    function followScroll(menu) {
+        var list = menu.querySelector('.menu-nav__list');
+        var sections = menu.querySelectorAll('.menu-section');
+        if (!list || !sections.length || !('IntersectionObserver' in window)) return;
+
+        var links = {};
+        list.querySelectorAll('.menu-nav__link').forEach(function (link) {
+            links[link.getAttribute('href').slice(1)] = link;
+        });
+        var indicator = el('li', 'menu-nav__indicator');
+        indicator.setAttribute('aria-hidden', 'true');
+        list.appendChild(indicator);
+        var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        var current = null;
+
+        function placeIndicator() {
+            if (!current) return;
+            indicator.style.width = current.offsetWidth + 'px';
+            indicator.style.height = current.offsetHeight + 'px';
+            indicator.style.transform = 'translate(' + current.offsetLeft + 'px, ' + current.offsetTop + 'px)';
+        }
+
+        function setCurrent(link) {
+            if (!link || link === current) return;
+            if (current) current.removeAttribute('aria-current');
+            link.setAttribute('aria-current', 'location');
+            current = link;
+            placeIndicator();
+            if (list.scrollWidth > list.clientWidth) {
+                list.scrollTo({
+                    left: link.offsetLeft - (list.clientWidth - link.offsetWidth) / 2,
+                    behavior: reduceMotion.matches ? 'auto' : 'smooth'
+                });
+            }
+        }
+
+        // A section is current while it crosses a thin band below the top
+        // of the viewport.
+        var observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) setCurrent(links[entry.target.id]);
+            });
+        }, { rootMargin: '-25% 0px -70% 0px' });
+        sections.forEach(function (section) {
+            observer.observe(section);
+        });
+        setCurrent(links[sections[0].id]);
+
+        // Link sizes change when the layout or the web font does.
+        window.addEventListener('resize', placeIndicator);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeIndicator);
+    }
+
+    function loadMenu(app) {
+        var loading = document.getElementById('menu-loading');
+        var content = document.getElementById('menu-content');
+        var config = {
+            menusBase: app.dataset.menusBase || '/menus/',
+            siteRoot: app.dataset.siteRoot || '/',
+            currency: app.dataset.currency || ''
+        };
+
+        function show(node, title) {
+            loading.hidden = true;
+            content.replaceChildren(node);
+            if (title) document.title = title;
+        }
+
+        function showNotice(notice) {
+            var box = renderNotice(notice);
+            show(box, notice.title);
+            box.querySelector('.notice__title').focus();
+        }
+
+        var route = readMenuId(window.location);
+        if (!route) {
+            showNotice({
+                title: 'Page not found',
+                body: 'There is nothing at this address. Menu links end in /menu/ followed by a code.',
+                action: { label: 'Go to the home page', href: config.siteRoot }
+            });
+            return;
+        }
+
+        var notFound = {
+            title: 'Menu not found',
+            body: 'This link does not match a published menu. Scan the QR code again, or ask the restaurant for a new link.'
+        };
+        if (!route.id) {
+            showNotice(notFound);
+            return;
+        }
+
+        function request() {
+            loading.hidden = false;
+            content.replaceChildren();
+
+            var controller = new AbortController();
+            var timer = setTimeout(function () {
+                controller.abort();
+            }, FETCH_TIMEOUT_MS);
+
+            fetch(config.menusBase + route.id + '.json', {
+                signal: controller.signal,
+                headers: { Accept: 'application/json' },
+                credentials: 'omit',
+                // Revalidate, so a menu published again shows up promptly.
+                cache: 'no-cache'
+            })
+                .then(function (response) {
+                    if (response.status === 404) return { missing: true };
+                    if (!response.ok) throw new Error('unexpected status');
+                    return response.json().then(function (data) {
+                        return { data: data };
+                    });
+                })
+                .then(function (result) {
+                    clearTimeout(timer);
+                    if (result.missing) {
+                        showNotice(notFound);
+                        return;
+                    }
+                    var menu = renderMenu(result.data, config);
+                    if (!menu) {
+                        showNotice({
+                            title: 'No dishes yet',
+                            body: 'The restaurant has not added any dishes to this menu. Check back soon.'
+                        });
+                        return;
+                    }
+                    show(menu);
+                    followScroll(menu);
+                })
+                .catch(function () {
+                    clearTimeout(timer);
+                    showNotice({
+                        title: 'The menu did not load',
+                        body: 'Check your connection and try again.',
+                        action: { label: 'Try again', onClick: request }
+                    });
+                });
+        }
+
+        request();
+    }
+
+    var app = document.getElementById('menu-app');
+    if (app) {
+        loadMenu(app);
+    } else {
+        var menu = document.querySelector('.menu');
+        if (menu) followScroll(menu);
+    }
+})();

@@ -6,6 +6,8 @@ title = "Dynamic Restaurant Menu"
 enableRobotsTXT = true
 enableGitInfo = true
 enableEmoji = true
+# The site has no taxonomies or feeds.
+disableKinds = ["taxonomy", "term", "rss"]
 
 # Build settings
 minify = false  # Set to true for production builds
@@ -17,7 +19,9 @@ buildFuture = false
   menuTitle = "Our Menu"
   restaurantName = "Delicious Restaurant"
   tagline = "Fresh ingredients, amazing flavors"
-  # User menus are published by demenu_bot to static/menus/<id>.json in this
+  # Menu prices carry no currency; the site puts this symbol before them.
+  currencySymbol = "$"
+  # User menus are published by demenu-bot to static/menus/<id>.json in this
   # repository and served from /menus/<id>.json; no API URL is needed.
 
 [menu]

@@ -1,42 +1,39 @@
-{{ $menuData := .Site.Data.menu }}
-<div class="menu-container">
-    {{- if $menuData.categories }}
-        <button class="sidebar-toggle sidebar-toggle-external" aria-label="Toggle categories">
-            <span class="toggle-icon">☰</span>
-        </button>
-        <div class="sidebar-overlay"></div>
-        <div class="menu-sidebar">
-            <div class="sidebar-header">
-                <button class="sidebar-toggle sidebar-toggle-internal" aria-label="Toggle categories">
-                    <span class="toggle-icon">☰</span>
-                </button>
-                <button class="sidebar-close" aria-label="Close sidebar">×</button>
-            </div>
-            <div class="menu-filters">
-                <button class="filter-btn active" data-category="all">All</button>
-                {{- range $menuData.categories }}
-                    <button class="filter-btn" data-category="{{ .id }}">{{ .name }}</button>
+{{- /* Server-rendered menu from data/menu.json. static/js/menu.js builds the
+       same markup for published menus; keep the two in step. */ -}}
+{{- $categories := site.Data.menu.categories -}}
+{{- if $categories }}
+<div class="menu">
+    <nav class="menu-nav" aria-label="Menu sections">
+        <ul class="menu-nav__list">
+            {{- range $index, $category := $categories }}
+                <li><a class="menu-nav__link" href="#section-{{ add $index 1 }}">{{ $category.name }}</a></li>
+            {{- end }}
+        </ul>
+    </nav>
+    <div class="menu-sections">
+        {{- range $index, $category := $categories }}
+            {{- $id := printf "section-%d" (add $index 1) }}
+            <section class="menu-section" id="{{ $id }}" aria-labelledby="{{ $id }}-title">
+                <h2 class="menu-section__title" id="{{ $id }}-title">{{ $category.name }}</h2>
+                {{- with $category.description }}
+                    <p class="menu-section__description">{{ . }}</p>
                 {{- end }}
-            </div>
-        </div>
-        <div class="menu-content">
-            <div class="menu-categories">
-                {{- range $menuData.categories }}
-                    <section class="menu-category" data-category="{{ .id }}">
-                        <h2 class="category-title">{{ .name }}</h2>
-                        {{- if .description }}
-                            <p class="category-description">{{ .description }}</p>
+                {{- with $category.items }}
+                    <ul class="dish-list">
+                        {{- range . }}
+                            {{- partial "dish.html" . }}
                         {{- end }}
-                        <div class="menu-items">
-                            {{- range .items }}
-                                {{- partial "meal.html" . }}
-                            {{- end }}
-                        </div>
-                    </section>
+                    </ul>
+                {{- else }}
+                    <p class="menu-section__empty">No dishes in this section yet.</p>
                 {{- end }}
-            </div>
-        </div>
-    {{- else }}
-        <p>Menu data not available.</p>
-    {{- end }}
+            </section>
+        {{- end }}
+    </div>
 </div>
+{{- else }}
+<div class="notice">
+    <h2 class="notice__title">No dishes yet</h2>
+    <p class="notice__body">Add categories to data/menu.json to fill the sample menu.</p>
+</div>
+{{- end }}

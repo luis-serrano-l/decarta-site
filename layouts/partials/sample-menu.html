@@ -1,0 +1,9 @@
+{{- /* The sample restaurant from data/menu.json, shown on the home page
+       and at /menu/. */ -}}
+<header class="masthead">
+    <h1 class="masthead__title">{{ site.Params.restaurantName | default site.Title }}</h1>
+    {{- with site.Params.tagline }}
+        <p class="masthead__tagline">{{ . }}</p>
+    {{- end }}
+</header>
+{{ partial "menu.html" . }}

@@ -2,9 +2,21 @@
 name: Deploy Hugo site to Pages
 
 on:
-  # Runs on pushes targeting the default branch
+  # Runs on pushes to the default branch that change the built site.
+  # demenu-bot publishes a menu by committing static/menus/<id>.json, so
+  # those pushes must deploy; changes to the README or docs need not.
   push:
     branches: ["main"]
+    paths:
+      - "static/menus/**"
+      - "static/**"
+      - "layouts/**"
+      - "content/**"
+      - "data/**"
+      - "assets/**"
+      - "hugo.toml"
+      - "hugo.production.toml"
+      - ".github/workflows/hugo.yml"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:

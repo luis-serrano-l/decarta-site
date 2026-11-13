@@ -1,143 +1,115 @@
-# Dynamic Menu - Hugo Static Site
+# demenu-site
 
-A dynamic restaurant menu website built with Hugo (Go-based static site generator) that can be deployed to GitHub Pages.
+The website that shows restaurant menus published with
+[demenu-bot](https://github.com/luis-serrano-l/demenu-bot). A diner scans a
+QR code or opens a link such as `/menu/3fK9…` and reads the menu on their
+phone.
 
-## Project Overview
+It is a [Hugo](https://gohugo.io/) site hosted on GitHub Pages, with one
+stylesheet and one script. There is no framework and no build step other
+than Hugo.
 
-This project creates a beautiful, responsive restaurant menu website with:
-- Food items organized by categories (Appetizers, Main Courses, Desserts, Beverages, etc.)
-- Sample food data with descriptions and prices
-- Dynamic menu display with filtering capabilities
-- GitHub Pages deployment ready
+<p>
+  <img src="docs/screenshots/phone-light.png" alt="A menu on a phone, light theme" width="260">
+  <img src="docs/screenshots/phone-dark.png" alt="The same menu, dark theme" width="260">
+</p>
 
-## Project Structure
+## How it pairs with the bot
 
-```
-demenu-site/
-├── README.md                 # This file
-├── hugo.toml                 # Hugo configuration
-├── .gitignore              # Git ignore rules
-├── .github/
-│   └── workflows/
-│       └── gh-pages.yml    # GitHub Actions workflow for deployment
-├── content/
-│   ├── _index.md           # Home page
-│   └── menu/
-│       └── _index.md       # Menu page
-├── data/
-│   └── menu.json           # Menu data (categories and food items)
-├── static/
-│   ├── css/
-│   │   └── custom.css      # Custom styles
-│   └── js/
-│       └── menu.js         # Menu filtering/interaction logic
-├── themes/                  # Hugo themes (if using a theme)
-└── layouts/
-    ├── _default/
-    │   ├── baseof.html     # Base template
-    │   ├── list.html       # List template
-    │   └── single.html     # Single page template
-    └── partials/
-        ├── header.html     # Header partial
-        ├── footer.html     # Footer partial
-        └── menu.html       # Menu display partial
-```
+1. A restaurant owner sends their menu to demenu-bot on Telegram.
+2. The bot validates it and commits it to this repository as
+   `static/menus/<id>.json`. The id is 16 to 32 base62 characters.
+3. That push runs the Pages workflow, which rebuilds and deploys the site.
+4. The bot gives the owner the link `/menu/<id>`.
 
-## GitHub Pages Deployment
+No page is generated per menu. GitHub Pages serves `404.html` for any
+unknown path and leaves the URL in the address bar, so `static/js/menu.js`
+reads the id from the path, checks its shape, and fetches
+`menus/<id>.json` from the site's own origin. Keep `layouts/404.html`:
+without it, menu links stop working.
 
-The GitHub Actions workflow automatically:
-- Builds the Hugo site
-- Deploys to GitHub Pages
-- Makes your site available at `https://YOUR_USERNAME.github.io/demenu-site/`
+The file format is defined by the bot; see its
+[menu schema](https://github.com/luis-serrano-l/demenu-bot/blob/main/docs/reference/menu-schema.md).
+The site also shows two optional item fields the bot does not accept yet:
+`dietary` (a text or a list of texts) and `spicy` (a text, a level from 1
+to 3, or `true`).
 
-**To enable GitHub Pages:**
-1. Go to your repository Settings → Pages
-2. Source: Select "GitHub Actions"
+## Local preview
 
-## Development Workflow
+You need Hugo 0.123 or later.
 
-1. **Make changes to content/data:**
-   - Edit `data/menu.json` to update menu items
-   - Edit `content/` files for pages
-   - Edit `layouts/` for template changes
-
-2. **Commit and push:**
-   ```bash
-   git add .
-   git commit -m "Update menu items"
-   git push
-   ```
-
-## Menu Data Structure
-
-The menu data is stored in `data/menu.json` with the following structure:
-
-```json
-{
-  "categories": [
-    {
-      "id": "appetizers",
-      "name": "Appetizers",
-      "description": "Category description",
-      "items": [
-        {
-          "name": "Item Name",
-          "description": "Item description",
-          "price": 9.99,
-          "dietary": "Vegetarian",
-          "spicy": "Mild",
-          "size": "Regular",
-          "image": "/images/item.jpg"
-        }
-      ]
-    }
-  ]
-}
+```bash
+hugo server
 ```
 
-## Reusable Meal Component
+Then open:
 
-The project includes a reusable meal component (`layouts/partials/meal.html`) that can be used to display menu items consistently throughout the site.
+- <http://localhost:1313/menu/SampleMenu0000000> for a published menu,
+  loaded from `static/menus/SampleMenu0000000.json`
+- <http://localhost:1313/menu/NoSuchMenu0000000> for the "menu not found"
+  state
+- <http://localhost:1313/> for the sample restaurant in `data/menu.json`
 
-### Usage
+`hugo server` answers unknown paths with `404.html`, as GitHub Pages does,
+so menu links behave the same locally. To preview your own menu, save it as
+`static/menus/<id>.json` with any id of 16 to 32 letters and digits.
 
-**Basic usage with menu data:**
-```go
-{{ range .items }}
-    {{ partial "meal.html" . }}
-{{ end }}
+To build as the workflow does:
+
+```bash
+hugo --config hugo.production.toml --minify
 ```
 
-**With custom parameters:**
-```go
-{{ partial "meal.html" (dict 
-    "name" "Grilled Salmon" 
-    "price" 24.99 
-    "description" "Fresh Atlantic salmon"
-    "dietary" "Gluten-Free"
-    "image" "/images/salmon.jpg"
-) }}
-```
+## Security
 
-### Available Parameters
+Menu files come from restaurant owners, so the site treats them as
+untrusted:
 
-- **name** (required): Name of the meal/item
-- **price** (required): Price of the meal (number)
-- **description** (optional): Description of the meal
-- **image** (optional): URL to an image of the meal
-- **dietary** (optional): Dietary information badge (e.g., "Vegetarian", "Gluten-Free", "Vegan")
-- **spicy** (optional): Spice level badge (e.g., "Mild", "Medium", "Hot")
-- **size** (optional): Size options (e.g., "Small", "Medium", "Large")
+- Menu text is written with `textContent` and elements are made with
+  `createElement`. The script never uses `innerHTML`.
+- An item image is used only if it is an `https://` URL or a path on this
+  site that starts with `/`.
+- The id is checked against `^[A-Za-z0-9]{16,32}$` before anything is
+  fetched.
+- Every page carries a Content-Security-Policy that allows scripts, styles,
+  fonts and data only from this origin and has no inline scripts or styles.
+  Keep it that way: new scripts go in `static/js/`, not in templates.
 
-The component automatically handles all optional fields and displays them only when provided.
+## Design
 
-## Customization
+Styles are in `static/css/custom.css`. Spacing and type sizes are steps of
+the golden ratio (1.618), defined once as custom properties at the top of
+the file together with the colours for the light and dark themes. Use those
+tokens instead of new literal values.
 
-- **Styling:** Edit `static/css/custom.css`
-- **Menu Logic:** Edit `static/js/menu.js`
-- **Templates:** Edit files in `layouts/`
-- **Menu Data:** Edit `data/menu.json`
+The markup for a menu exists twice and must stay in step:
+`layouts/partials/menu.html` and `dish.html` render the sample restaurant
+at build time, and `static/js/menu.js` builds the same elements for
+published menus.
+
+Headings use [Bricolage Grotesque](https://github.com/ateliertriay/bricolage),
+served from `static/fonts/` under the SIL Open Font License.
+
+## Layout of the repository
+
+| Path | What it holds |
+|---|---|
+| `static/menus/` | Published menus, written by the bot. `SampleMenu0000000.json` is a fixture for previews. |
+| `static/js/menu.js` | Loads and renders `/menu/<id>`; category navigation |
+| `static/css/custom.css` | Design tokens and all styles |
+| `layouts/404.html` | The page behind every `/menu/<id>` link |
+| `layouts/partials/` | Build-time menu markup for the sample restaurant |
+| `data/menu.json` | The sample restaurant shown on the home page |
+| `hugo.toml`, `hugo.production.toml` | Local and Pages configuration, including `currencySymbol` |
+| `.github/workflows/hugo.yml` | Builds and deploys on pushes that change the site, including `static/menus/` |
+
+## Deployment
+
+In the repository settings, set Pages to deploy from GitHub Actions. The
+workflow then publishes the site at
+<https://luis-serrano-l.github.io/demenu-site/> on every push to `main` that
+touches the site's sources or `static/menus/`.
 
 ## License
 
-This project is open source and available for personal or commercial use.
+See [LICENSE](LICENSE).

@@ -1,20 +1,27 @@
 <!DOCTYPE html>
-<html lang="{{ .Site.LanguageCode }}">
+<html lang="{{ site.LanguageCode }}">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{- /* Menu JSON is untrusted: nothing inline may run, and only this
+           origin may serve scripts, styles, fonts and data. Images may also
+           come from https hosts, because menu items can link to them. */}}
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+    <meta name="referrer" content="no-referrer">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#fffaf4" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1b1512" media="(prefers-color-scheme: dark)">
+    <title>{{ block "title" . }}{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }} | {{ site.Title }}{{ end }}{{ end }}</title>
+    <link rel="icon" href="{{ "favicon.svg" | relURL }}" type="image/svg+xml">
+    <link rel="preload" href="{{ "fonts/bricolage-grotesque-latin.woff2" | relURL }}" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="{{ "css/custom.css" | relURL }}">
+    <script src="{{ "js/menu.js" | relURL }}" defer></script>
 </head>
 <body>
-    <main>
-        {{ block "main" . }}{{ end }}
+    <a class="skip-link" href="#main">Skip to the menu</a>
+    <main id="main" class="page">
+        {{- block "main" . }}{{ end }}
     </main>
-    {{ partial "footer.html" . }}
-    <script>
-        // Published menus are static files in this site: menus/<id>.json
-        window.MENUS_BASE_URL = {{ "menus/" | relURL }};
-    </script>
-    <script src="{{ "js/menu.js" | relURL }}"></script>
+    {{- partial "footer.html" . }}
 </body>
 </html>
