@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+<!-- cup with steam -->
+<g transform="translate(22 30)"><path d="M4 22h40v14a16 16 0 0 1-16 16h-8A16 16 0 0 1 4 36z"/><path d="M44 26h5a7 7 0 0 1 0 14h-5"/><path d="M0 58h48"/><path d="M16 4c-4 4 4 6 0 11M30 2c-4 4 4 6 0 11"/></g>
+<!-- leaf sprig -->
+<g transform="translate(140 22) rotate(18)"><path d="M24 62V26"/><path d="M24 26C12 22 10 10 14 2c10 4 14 14 10 24z"/><path d="M24 44c-9 2-15-3-17-10 8-2 15 2 17 10z"/><path d="M24 50c9 1 14-5 15-12-8-1-14 4-15 12z"/></g>
+<!-- citrus slice -->
+<g transform="translate(118 116)"><circle cx="30" cy="30" r="27"/><circle cx="30" cy="30" r="20"/><path d="M30 10v40M10 30h40M16 16l28 28M44 16L16 44"/></g>
+<!-- chilli -->
+<g transform="translate(20 128) rotate(-12)"><path d="M40 12c10-2 18 5 18 15 0 15-16 26-39 26-6 0-10-1-13-3 18-2 27-11 27-24 0-6 2-12 7-14z"/><path d="M43 12c-1-6 2-11 8-13"/></g>
+<!-- dots -->
+<circle cx="102" cy="58" r="2.500"/><circle cx="96" cy="196" r="2.500"/><circle cx="200" cy="100" r="2.500"/><circle cx="10" cy="108" r="2.500"/>
+</svg>

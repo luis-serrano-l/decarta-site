@@ -14,7 +14,7 @@
 {{- end }}
 <li class="dish">
     {{- with $image }}
-        <div class="dish__image"><img src="{{ . }}" alt="" width="178" height="110" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div>
+        <div class="dish__image"><img src="{{ . }}" alt="" width="110" height="110" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div>
     {{- end }}
     <div class="dish__body">
         <div class="dish__heading">
@@ -26,12 +26,20 @@
             <p class="dish__description">{{ . }}</p>
         {{- end }}
         {{- if or $dietary .spicy }}
+            {{- /* Icons and chilli counts follow the same keywords as
+                   dietaryIcon and spiceLevel in static/js/menu.js. */}}
             <ul class="badges">
                 {{- range $dietary }}
-                    <li class="badge badge--dietary">{{ . }}</li>
+                    {{- $text := lower . }}
+                    {{- $icon := "" }}
+                    {{- if findRE `vegan|veget|plant` $text }}{{ $icon = "leaf" }}{{ else if in $text "gluten" }}{{ $icon = "wheat" }}{{ end }}
+                    <li class="badge badge--dietary">{{ with $icon }}<span class="badge__icon badge__icon--{{ . }}" aria-hidden="true"></span>{{ end }}{{ . }}</li>
                 {{- end }}
                 {{- with .spicy }}
-                    <li class="badge badge--spicy">{{ . }}</li>
+                    {{- $text := lower . }}
+                    {{- $level := 1 }}
+                    {{- if findRE `hot|extra|very|muy` $text }}{{ $level = 3 }}{{ else if findRE `medium|medio` $text }}{{ $level = 2 }}{{ end }}
+                    <li class="badge badge--spicy">{{ range seq $level }}<span class="badge__icon badge__icon--chilli" aria-hidden="true"></span>{{ end }}{{ . }}</li>
                 {{- end }}
             </ul>
         {{- end }}

@@ -86,6 +86,36 @@
         return clean(value, MAX_NAME);
     }
 
+    // The icon for a dietary label, chosen by keyword so that Spanish and
+    // English labels both match: leaf for vegan and vegetarian, wheat for
+    // gluten. Other labels get no icon.
+    function dietaryIcon(label) {
+        var text = label.toLowerCase();
+        if (/vegan|veget|plant/.test(text)) return 'leaf';
+        if (text.indexOf('gluten') !== -1) return 'wheat';
+        return '';
+    }
+
+    // How many chillies a spicy badge shows, from 1 to 3.
+    function spiceLevel(value, label) {
+        if (typeof value === 'number') return Math.min(3, Math.max(1, Math.round(value)));
+        var text = label.toLowerCase();
+        if (/hot|extra|very|muy/.test(text)) return 3;
+        if (/medium|medio/.test(text)) return 2;
+        return 1;
+    }
+
+    function badge(kind, label, icon, count) {
+        var node = el('li', 'badge badge--' + kind);
+        for (var i = 0; icon && i < count; i++) {
+            var mark = el('span', 'badge__icon badge__icon--' + icon);
+            mark.setAttribute('aria-hidden', 'true');
+            node.appendChild(mark);
+        }
+        node.appendChild(document.createTextNode(label));
+        return node;
+    }
+
     function formatPrice(price, currency) {
         if (typeof price !== 'number' || !isFinite(price) || price < 0) return '';
         return currency + price.toFixed(2);
@@ -102,7 +132,7 @@
             var frame = el('div', 'dish__image');
             var img = el('img');
             img.alt = '';
-            img.width = 178;
+            img.width = 110;
             img.height = 110;
             img.loading = 'lazy';
             img.decoding = 'async';
@@ -135,9 +165,9 @@
         if (dietary.length || spicy) {
             var badges = el('ul', 'badges');
             dietary.forEach(function (label) {
-                badges.appendChild(el('li', 'badge badge--dietary', label));
+                badges.appendChild(badge('dietary', label, dietaryIcon(label), 1));
             });
-            if (spicy) badges.appendChild(el('li', 'badge badge--spicy', spicy));
+            if (spicy) badges.appendChild(badge('spicy', spicy, 'chilli', spiceLevel(item.spicy, spicy)));
             body.appendChild(badges);
         }
 
@@ -221,8 +251,8 @@
         return box;
     }
 
-    // Marks the link of the section being read, and on narrow screens keeps
-    // that link in view inside the horizontally scrolling bar.
+    // Marks the link of the section being read, slides a filled pill behind
+    // it, and on narrow screens keeps it in view inside the scrolling bar.
     function followScroll(menu) {
         var list = menu.querySelector('.menu-nav__list');
         var sections = menu.querySelectorAll('.menu-section');
@@ -232,14 +262,25 @@
         list.querySelectorAll('.menu-nav__link').forEach(function (link) {
             links[link.getAttribute('href').slice(1)] = link;
         });
+        var indicator = el('li', 'menu-nav__indicator');
+        indicator.setAttribute('aria-hidden', 'true');
+        list.appendChild(indicator);
         var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
         var current = null;
+
+        function placeIndicator() {
+            if (!current) return;
+            indicator.style.width = current.offsetWidth + 'px';
+            indicator.style.height = current.offsetHeight + 'px';
+            indicator.style.transform = 'translate(' + current.offsetLeft + 'px, ' + current.offsetTop + 'px)';
+        }
 
         function setCurrent(link) {
             if (!link || link === current) return;
             if (current) current.removeAttribute('aria-current');
             link.setAttribute('aria-current', 'location');
             current = link;
+            placeIndicator();
             if (list.scrollWidth > list.clientWidth) {
                 list.scrollTo({
                     left: link.offsetLeft - (list.clientWidth - link.offsetWidth) / 2,
@@ -259,6 +300,10 @@
             observer.observe(section);
         });
         setCurrent(links[sections[0].id]);
+
+        // Link sizes change when the layout or the web font does.
+        window.addEventListener('resize', placeIndicator);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeIndicator);
     }
 
     function loadMenu(app) {

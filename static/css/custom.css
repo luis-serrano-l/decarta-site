@@ -70,18 +70,24 @@
 
     --hairline: var(--space--6);
     --radius: var(--space--2);
+    --radius-panel: var(--space-1);
     --radius-pill: var(--space-8);
     --measure: var(--space-7);
-    --image-ratio: var(--phi);
+    --icon: var(--space-0);
+    --opacity-faint: calc(1 / var(--phi) / var(--phi) / var(--phi));
+    --slide: calc(0.2s * var(--phi));
+    --rise: calc(0.382s * var(--phi));
     --pulse: calc(1s * var(--phi));
 
-    /* Light theme. --color-accent is the one warm accent. */
-    --color-bg: #f3f4ef;
-    --color-ink: #1e1a15;
-    --color-muted: #5c544a;
-    --color-rule: #d6d3c8;
-    --color-leader: #8d867a;
-    --color-accent: #a93b15;
+    /* Light theme. --color-accent is the one warm accent; --color-tint is
+       its pastel, used behind the header, price chips and dietary badges. */
+    --color-bg: #fffaf4;
+    --color-tint: #fde5d4;
+    --color-ink: #2a211b;
+    --color-muted: #6b5d52;
+    --color-rule: #eeddd0;
+    --color-leader: #b79f8c;
+    --color-accent: #b23a0a;
     --color-on-accent: #ffffff;
 
     color-scheme: light dark;
@@ -89,13 +95,14 @@
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --color-bg: #17140f;
-        --color-ink: #f2ede5;
-        --color-muted: #b5ab9c;
-        --color-rule: #3a332b;
-        --color-leader: #857b6d;
-        --color-accent: #f2925a;
-        --color-on-accent: #17140f;
+        --color-bg: #1b1512;
+        --color-tint: #3b2416;
+        --color-ink: #f6ede6;
+        --color-muted: #c0b0a2;
+        --color-rule: #3a2d25;
+        --color-leader: #7b6a5d;
+        --color-accent: #ff9d66;
+        --color-on-accent: #1b1512;
     }
 }
 
@@ -164,9 +171,9 @@ a {
     position: absolute;
     inset-block-start: var(--space--1);
     inset-inline-start: var(--space--1);
-    z-index: 2;
+    z-index: 3;
     padding: var(--space--1) var(--space-0);
-    border-radius: var(--radius);
+    border-radius: var(--radius-pill);
     background: var(--color-accent);
     color: var(--color-on-accent);
     font-weight: var(--weight-bold);
@@ -184,17 +191,50 @@ a {
     width: 100%;
     max-width: calc(var(--space-8) + var(--space-5) + var(--space-3) + var(--space-2) * 2);
     margin-inline: auto;
-    padding-inline: var(--space-1);
+    padding-inline: var(--space-0);
 }
 
 .page {
     min-height: 100vh;
     min-height: 100svh;
-    padding-block-end: var(--space-3);
+    padding-block: var(--space-0) var(--space-3);
 }
 
+/* The header is a pastel panel. Line drawings of a cup, a sprig, a citrus
+   slice and a chilli are tiled across its right side and fade out towards
+   the text. */
 .masthead {
-    padding-block: var(--space-2) var(--space-1);
+    position: relative;
+    overflow: hidden;
+    padding: var(--space-3) var(--space-1) var(--space-1);
+    border-radius: var(--radius-panel);
+    background: var(--color-tint);
+}
+
+.masthead::before,
+.masthead::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: 80%;
+}
+
+.masthead::before {
+    background: var(--color-accent);
+    opacity: var(--opacity-faint);
+    -webkit-mask: url("../icons/pattern.svg") top right / var(--space-4) repeat;
+    mask: url("../icons/pattern.svg") top right / var(--space-4) repeat;
+}
+
+.masthead::after {
+    background: linear-gradient(to right, var(--color-tint), transparent);
+}
+
+.masthead__title,
+.masthead__tagline {
+    position: relative;
+    z-index: 1;
 }
 
 .masthead__title {
@@ -214,6 +254,7 @@ a {
 
 .prose {
     max-width: var(--measure);
+    padding-block-start: var(--space-1);
 }
 
 .prose > * + * {
@@ -222,9 +263,9 @@ a {
 
 .site-footer {
     padding-block: var(--space-1) var(--space-2);
-    border-block-start: var(--hairline) solid var(--color-rule);
     color: var(--color-muted);
     font-size: var(--text--1);
+    text-align: center;
 }
 
 /* ---------- Category navigation ---------- */
@@ -232,17 +273,16 @@ a {
 .menu-nav {
     position: sticky;
     inset-block-start: 0;
-    z-index: 1;
-    margin-inline: calc(var(--space-1) * -1);
+    z-index: 2;
+    margin-inline: calc(var(--space-0) * -1);
     background: var(--color-bg);
-    border-block-end: var(--hairline) solid var(--color-rule);
 }
 
 .menu-nav__list {
     position: relative;
     display: flex;
-    gap: var(--space-1);
-    padding-inline: var(--space-1);
+    gap: var(--space--2);
+    padding: var(--space--1) var(--space-0);
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
@@ -253,28 +293,40 @@ a {
 }
 
 .menu-nav__link {
+    position: relative;
+    z-index: 1;
     display: block;
-    padding-block: var(--space--1) calc(var(--space--1) - var(--space--3));
-    border-block-end: var(--space--3) solid transparent;
-    color: var(--color-muted);
+    padding: var(--space--2) var(--space-0);
+    border: var(--hairline) solid var(--color-rule);
+    border-radius: var(--radius-pill);
+    color: var(--color-ink);
     font-weight: var(--weight-medium);
     text-decoration: none;
     white-space: nowrap;
 }
 
 .menu-nav__link:hover {
-    color: var(--color-ink);
+    border-color: var(--color-accent);
 }
 
 .menu-nav__link[aria-current] {
-    border-color: var(--color-accent);
-    color: var(--color-ink);
+    border-color: transparent;
+    color: var(--color-on-accent);
+}
+
+/* The filled pill behind the current link. menu.js sizes and moves it. */
+.menu-nav__indicator {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    border-radius: var(--radius-pill);
+    background: var(--color-accent);
 }
 
 /* ---------- Sections and dishes ---------- */
 
 .menu-section {
-    padding-block-start: var(--space-2);
+    padding-block-start: var(--space-1);
 }
 
 .menu-section + .menu-section {
@@ -282,12 +334,14 @@ a {
 }
 
 .menu-section__title {
-    color: var(--color-accent);
     font-family: var(--font-display);
     font-size: var(--text-3);
     font-weight: var(--weight-bold);
-    line-height: var(--leading-tight);
+    line-height: var(--leading-body);
     letter-spacing: var(--tracking-display);
+    text-decoration: underline wavy var(--color-accent);
+    text-decoration-thickness: var(--space--5);
+    text-underline-offset: var(--space--2);
     overflow-wrap: anywhere;
 }
 
@@ -300,18 +354,23 @@ a {
 }
 
 .dish-list {
-    display: grid;
-    gap: var(--space-1);
-    margin-block-start: var(--space-1);
+    margin-block-start: var(--space--1);
 }
 
-/* On a phone the name, leader and price take the full width, and the image
-   sits to the right of the description, so a photo never squeezes a name.
+/* The name, leader and price take the full width, and the photo sits to
+   the right of the description, so a photo never squeezes a name.
    .dish__body dissolves into the grid to allow that. */
 .dish {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    /* The last row takes the height a photo adds, so text stays packed. */
+    grid-template-rows: auto auto auto 1fr;
     align-items: start;
+    padding-block: var(--space-0);
+}
+
+.dish + .dish {
+    border-block-start: var(--hairline) solid var(--color-rule);
 }
 
 .dish__body {
@@ -329,14 +388,14 @@ a {
 
 .dish__image {
     grid-column: 2;
-    grid-row: 2 / span 2;
+    grid-row: 2 / -1;
     width: var(--space-4);
-    aspect-ratio: var(--image-ratio);
+    aspect-ratio: 1;
     margin-block-start: var(--space--1);
     margin-inline-start: var(--space-0);
     overflow: hidden;
-    border-radius: var(--radius);
-    background: var(--color-rule);
+    border-radius: var(--radius-pill);
+    background: var(--color-tint);
 }
 
 .dish__image img {
@@ -366,11 +425,15 @@ a {
 .dish__leader {
     flex: 1;
     min-width: var(--space--1);
-    border-block-end: var(--space--5) dotted var(--color-leader);
+    border-block-end: var(--space--4) dotted var(--color-leader);
 }
 
 .dish__price {
     flex: none;
+    padding: var(--space--4) var(--space--1);
+    border-radius: var(--radius-pill);
+    background: var(--color-tint);
+    color: var(--color-accent);
     font-family: var(--font-display);
     font-size: var(--text-1);
     font-weight: var(--weight-bold);
@@ -394,10 +457,13 @@ a {
 }
 
 .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space--3);
     max-width: 100%;
     padding: var(--space--4) var(--space--1);
-    border: var(--hairline) solid var(--color-muted);
     border-radius: var(--radius-pill);
+    background: var(--color-tint);
     font-size: var(--text--1);
     font-weight: var(--weight-bold);
     line-height: var(--leading-body);
@@ -405,16 +471,49 @@ a {
 }
 
 .badge--spicy {
-    border-color: var(--color-accent);
     background: var(--color-accent);
     color: var(--color-on-accent);
+}
+
+/* Icons are SVG files used as masks, so they take the colour of the text
+   or the accent and need no inline markup. */
+.badge__icon {
+    flex: none;
+    width: var(--icon);
+    height: var(--icon);
+    background: var(--color-accent);
+    -webkit-mask: center / contain no-repeat;
+    mask: center / contain no-repeat;
+}
+
+.badge--spicy .badge__icon {
+    background: currentColor;
+}
+
+.badge__icon + .badge__icon {
+    margin-inline-start: calc(var(--space--3) * -1);
+}
+
+.badge__icon--leaf {
+    -webkit-mask-image: url("../icons/leaf.svg");
+    mask-image: url("../icons/leaf.svg");
+}
+
+.badge__icon--wheat {
+    -webkit-mask-image: url("../icons/wheat.svg");
+    mask-image: url("../icons/wheat.svg");
+}
+
+.badge__icon--chilli {
+    -webkit-mask-image: url("../icons/chilli.svg");
+    mask-image: url("../icons/chilli.svg");
 }
 
 /* ---------- States: loading, not found, empty, error ---------- */
 
 .notice {
     max-width: var(--measure);
-    padding-block: var(--space-1) var(--space-3);
+    padding-block: var(--space-2) var(--space-3);
 }
 
 .notice__title {
@@ -439,7 +538,7 @@ a {
     margin-block-start: var(--space-1);
     padding: var(--space--1) var(--space-1);
     border: 0;
-    border-radius: var(--radius);
+    border-radius: var(--radius-pill);
     background: var(--color-accent);
     color: var(--color-on-accent);
     font: inherit;
@@ -450,19 +549,24 @@ a {
 
 .skeleton__nav {
     display: flex;
-    gap: var(--space-1);
+    gap: var(--space--2);
     padding-block: var(--space--1);
-    border-block-end: var(--hairline) solid var(--color-rule);
+}
+
+.skeleton__nav .bone {
+    height: var(--space-2);
+    border-radius: var(--radius-pill);
 }
 
 .skeleton__title {
-    margin-block: var(--space-2) var(--space-1);
+    margin-block: var(--space-1);
 }
 
 .skeleton__dish {
     display: grid;
     gap: var(--space--1);
-    margin-block-end: var(--space-1);
+    padding-block: var(--space-0);
+    border-block-start: var(--hairline) solid var(--color-rule);
 }
 
 .skeleton__row {
@@ -475,7 +579,7 @@ a {
     display: block;
     height: var(--space-0);
     border-radius: var(--radius);
-    background: var(--color-rule);
+    background: var(--color-tint);
 }
 
 .bone--title {
@@ -503,17 +607,47 @@ a {
     max-width: var(--space-6);
 }
 
+/* ---------- Motion, only for people who have not asked for less ---------- */
+
 @media (prefers-reduced-motion: no-preference) {
     html {
         scroll-behavior: smooth;
     }
 
     .skip-link {
-        transition: transform calc(var(--pulse) / 10);
+        transition: transform var(--slide);
+    }
+
+    .menu-nav__link {
+        transition: color var(--slide), border-color var(--slide);
+    }
+
+    .menu-nav__indicator {
+        transition: transform var(--slide) ease-out, width var(--slide) ease-out, height var(--slide) ease-out;
+    }
+
+    /* One entrance: the sections rise into place when the menu appears. */
+    .menu-section {
+        animation: rise var(--rise) ease-out backwards;
+    }
+
+    .menu-section:nth-child(2) {
+        animation-delay: calc(var(--rise) / var(--phi) / var(--phi));
+    }
+
+    .menu-section:nth-child(n + 3) {
+        animation-delay: calc(var(--rise) / var(--phi));
     }
 
     .bone {
         animation: pulse var(--pulse) ease-in-out infinite alternate;
+    }
+}
+
+@keyframes rise {
+    from {
+        opacity: 0;
+        transform: translateY(var(--space-0));
     }
 }
 
@@ -535,8 +669,22 @@ a {
         padding-inline: var(--space-2);
     }
 
+    .page {
+        padding-block-start: var(--space-1);
+    }
+
     .masthead {
-        padding-block: var(--space-3) var(--space-2);
+        padding: var(--space-4) var(--space-2) var(--space-2);
+    }
+
+    .masthead::before,
+    .masthead::after {
+        width: 62%;
+    }
+
+    .masthead::before {
+        -webkit-mask-size: var(--space-5);
+        mask-size: var(--space-5);
     }
 
     .masthead__title {
@@ -548,25 +696,22 @@ a {
         grid-template-columns: var(--space-5) minmax(0, 1fr);
         gap: var(--space-3);
         align-items: start;
+        padding-block-start: var(--space-2);
     }
 
     .menu-nav {
         inset-block-start: var(--space-1);
         margin-inline: 0;
-        border-block-end: 0;
     }
 
     .menu-nav__list {
         flex-direction: column;
-        gap: 0;
-        padding-inline: 0;
+        align-items: flex-start;
+        padding: 0;
         overflow: visible;
     }
 
     .menu-nav__link {
-        padding: var(--space--2) var(--space-0);
-        border-block-end: 0;
-        border-inline-start: var(--space--3) solid var(--color-rule);
         white-space: normal;
         overflow-wrap: anywhere;
     }
@@ -579,26 +724,8 @@ a {
         margin-block-start: var(--space-2);
     }
 
-    /* With room to spare, the image moves to the left of the whole dish. */
-    .dish {
-        display: flex;
-        gap: var(--space-1);
-    }
-
-    .dish__body {
-        display: block;
-        flex: 1;
-        min-width: 0;
-    }
-
-    .dish__image {
-        flex: none;
-        width: var(--space-5);
-        margin-block-start: var(--space--3);
-        margin-inline-start: 0;
-    }
-
     .skeleton {
         max-width: var(--space-8);
+        padding-block-start: var(--space-1);
     }
 }
