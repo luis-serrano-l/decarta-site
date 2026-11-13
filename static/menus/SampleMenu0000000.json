@@ -1,0 +1,96 @@
+{
+  "categories": [
+    {
+      "id": "starters",
+      "name": "Starters",
+      "description": "Something to share",
+      "items": [
+        {
+          "name": "Bruschetta",
+          "description": "Toasted bread, tomato, basil",
+          "price": 6.5,
+          "image": "/images/sample/bruschetta.svg",
+          "dietary": ["Vegan"]
+        },
+        {
+          "name": "Soup of the day",
+          "price": 5,
+          "dietary": "Vegetarian"
+        },
+        {
+          "name": "Patatas bravas",
+          "description": "Fried potatoes with a smoked paprika sauce and garlic mayonnaise",
+          "price": 7.25,
+          "image": "/images/sample/bravas.svg",
+          "dietary": ["Vegetarian", "Gluten-free"],
+          "spicy": "Medium"
+        }
+      ]
+    },
+    {
+      "id": "mains",
+      "name": "Main dishes",
+      "items": [
+        {
+          "name": "Grilled sea bass",
+          "description": "With lemon and seasonal vegetables",
+          "price": 18.9,
+          "image": "/images/sample/sea-bass.svg",
+          "dietary": "Gluten-free"
+        },
+        {
+          "name": "Mushroom risotto",
+          "description": "Arborio rice, porcini, parmesan and thyme",
+          "price": 14,
+          "dietary": "Vegetarian"
+        },
+        {
+          "name": "Chicken in chipotle and tomatillo salsa with handmade tortillas",
+          "description": "Slow-cooked chicken thigh, charred tomatillo, pickled red onion",
+          "price": 16.5,
+          "spicy": "Hot"
+        }
+      ]
+    },
+    {
+      "id": "desserts",
+      "name": "Desserts",
+      "items": [
+        {
+          "name": "Tiramisu",
+          "price": 6
+        },
+        {
+          "name": "Lemon sorbet",
+          "description": "Two scoops",
+          "price": 4.5,
+          "dietary": ["Vegan", "Gluten-free"]
+        }
+      ]
+    },
+    {
+      "id": "drinks",
+      "name": "Drinks",
+      "description": "Ask about today's fresh juices",
+      "items": [
+        {
+          "name": "Espresso",
+          "price": 2.2
+        },
+        {
+          "name": "Fresh lemonade",
+          "price": 3.5
+        },
+        {
+          "name": "House red, glass",
+          "price": 5
+        }
+      ]
+    },
+    {
+      "id": "specials",
+      "name": "Specials",
+      "items": []
+    }
+  ]
+}
