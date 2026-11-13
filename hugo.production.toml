@@ -3,7 +3,7 @@
 
 baseURL = "https://luis-serrano-l.github.io/decarta-site/"
 languageCode = "en-us"
-title = "Dynamic Restaurant Menu"
+title = "Decarta"
 
 # Enable features
 enableRobotsTXT = true
@@ -20,7 +20,7 @@ buildFuture = false
 # Menu configuration
 [params]
   menuTitle = "Our Menu"
-  restaurantName = "Delicious Restaurant"
+  restaurantName = "Trattoria Decarta"
   tagline = "Fresh ingredients, amazing flavors"
   # Menu prices carry no currency; the site puts this symbol before them.
   currencySymbol = "$"
