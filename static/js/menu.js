@@ -256,7 +256,7 @@
     function followScroll(menu) {
         var list = menu.querySelector('.menu-nav__list');
         var sections = menu.querySelectorAll('.menu-section');
-        if (!list || !sections.length || !('IntersectionObserver' in window)) return;
+        if (!list || !sections.length) return;
 
         var links = {};
         list.querySelectorAll('.menu-nav__link').forEach(function (link) {
@@ -289,17 +289,55 @@
             }
         }
 
-        // A section is current while it crosses a thin band below the top
-        // of the viewport.
-        var observer = new IntersectionObserver(function (entries) {
-            entries.forEach(function (entry) {
-                if (entry.isIntersecting) setCurrent(links[entry.target.id]);
+        // The current section is the last one whose top has passed a line a
+        // quarter of the way down the viewport. A short menu cannot scroll
+        // its last sections up to that line, so at the bottom of the page the
+        // last section is current.
+        function sectionInView() {
+            var root = document.documentElement;
+            if (window.scrollY > 0 && window.innerHeight + window.scrollY >= root.scrollHeight - 2) {
+                return sections[sections.length - 1];
+            }
+            var line = window.innerHeight * 0.25;
+            var found = sections[0];
+            sections.forEach(function (section) {
+                if (section.getBoundingClientRect().top <= line) found = section;
             });
-        }, { rootMargin: '-25% 0px -70% 0px' });
-        sections.forEach(function (section) {
-            observer.observe(section);
+            return found;
+        }
+
+        // A tapped link stays current while the page scrolls to its section
+        // (which may stop short of it) and until the reader scrolls again.
+        var pinned = false;
+        var settle = null;
+        list.addEventListener('click', function (event) {
+            var link = event.target.closest('.menu-nav__link');
+            if (!link) return;
+            setCurrent(link);
+            pinned = true;
+            clearTimeout(settle);
+            settle = setTimeout(function () { settle = null; }, 1000);
         });
-        setCurrent(links[sections[0].id]);
+
+        var frame = 0;
+        window.addEventListener('scroll', function () {
+            if (pinned) {
+                // Scroll events within a moment of the tap are its own
+                // scrolling; restart the wait until they stop.
+                if (settle) {
+                    clearTimeout(settle);
+                    settle = setTimeout(function () { settle = null; }, 150);
+                    return;
+                }
+                pinned = false;
+            }
+            if (frame) return;
+            frame = requestAnimationFrame(function () {
+                frame = 0;
+                setCurrent(links[sectionInView().id]);
+            });
+        }, { passive: true });
+        setCurrent(links[sectionInView().id]);
 
         // Link sizes change when the layout or the web font does.
         window.addEventListener('resize', placeIndicator);
