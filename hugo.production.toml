@@ -1,7 +1,7 @@
 # Production configuration for GitHub Pages
 # Use this when building for production: hugo --config hugo.production.toml
 
-baseURL = "https://luis-serrano-l.github.io/demenu-site/"
+baseURL = "https://luis-serrano-l.github.io/decarta-site/"
 languageCode = "en-us"
 title = "Dynamic Restaurant Menu"
 
@@ -24,7 +24,7 @@ buildFuture = false
   tagline = "Fresh ingredients, amazing flavors"
   # Menu prices carry no currency; the site puts this symbol before them.
   currencySymbol = "$"
-  # User menus are published by demenu-bot to static/menus/<id>.json in this
+  # User menus are published by decarta-bot to static/menus/<id>.json in this
   # repository and served from /menus/<id>.json; no API URL is needed.
 
 [menu]

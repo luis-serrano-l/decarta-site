@@ -1,7 +1,7 @@
-# demenu-site
+# decarta-site
 
 The website that shows restaurant menus published with
-[demenu-bot](https://github.com/luis-serrano-l/demenu-bot). A diner scans a
+[decarta-bot](https://github.com/luis-serrano-l/decarta-bot). A diner scans a
 QR code or opens a link such as `/menu/3fK9…` and reads the menu on their
 phone.
 
@@ -16,7 +16,7 @@ than Hugo.
 
 ## How it pairs with the bot
 
-1. A restaurant owner sends their menu to demenu-bot on Telegram.
+1. A restaurant owner sends their menu to decarta-bot on Telegram.
 2. The bot validates it and commits it to this repository as
    `static/menus/<id>.json`. The id is 16 to 32 base62 characters.
 3. That push runs the Pages workflow, which rebuilds and deploys the site.
@@ -29,7 +29,7 @@ reads the id from the path, checks its shape, and fetches
 without it, menu links stop working.
 
 The file format is defined by the bot; see its
-[menu schema](https://github.com/luis-serrano-l/demenu-bot/blob/main/docs/reference/menu-schema.md).
+[menu schema](https://github.com/luis-serrano-l/decarta-bot/blob/main/docs/reference/menu-schema.md).
 The site also shows two optional item fields the bot does not accept yet:
 `dietary` (a text or a list of texts) and `spicy` (a text, a level from 1
 to 3, or `true`).
@@ -107,7 +107,7 @@ served from `static/fonts/` under the SIL Open Font License.
 
 In the repository settings, set Pages to deploy from GitHub Actions. The
 workflow then publishes the site at
-<https://luis-serrano-l.github.io/demenu-site/> on every push to `main` that
+<https://luis-serrano-l.github.io/decarta-site/> on every push to `main` that
 touches the site's sources or `static/menus/`.
 
 ## License
