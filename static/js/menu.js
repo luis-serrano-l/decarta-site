@@ -2,7 +2,7 @@
  * Loads a published menu for /menu/<id> and keeps the category navigation
  * in step with scrolling.
  *
- * Menu files are written by demenu-bot from what restaurant owners send it,
+ * Menu files are written by decarta-bot from what restaurant owners send it,
  * so their content is untrusted. Everything is rendered with createElement
  * and textContent; no markup is ever parsed from menu data.
  */

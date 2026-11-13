@@ -3,7 +3,7 @@ name: Deploy Hugo site to Pages
 
 on:
   # Runs on pushes to the default branch that change the built site.
-  # demenu-bot publishes a menu by committing static/menus/<id>.json, so
+  # decarta-bot publishes a menu by committing static/menus/<id>.json, so
   # those pushes must deploy; changes to the README or docs need not.
   push:
     branches: ["main"]
