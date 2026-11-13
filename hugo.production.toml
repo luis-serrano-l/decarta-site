@@ -1,7 +1,7 @@
 # Production configuration for GitHub Pages
 # Use this when building for production: hugo --config hugo.production.toml
 
-baseURL = "https://luis-serrano-l.github.io/demenu/"
+baseURL = "https://luis-serrano-l.github.io/demenu-site/"
 languageCode = "en-us"
 title = "Dynamic Restaurant Menu"
 

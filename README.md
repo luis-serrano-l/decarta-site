@@ -13,7 +13,7 @@ This project creates a beautiful, responsive restaurant menu website with:
 ## Project Structure
 
 ```
-demenu/
+demenu-site/
 ├── README.md                 # This file
 ├── hugo.toml                 # Hugo configuration
 ├── .gitignore              # Git ignore rules
@@ -48,7 +48,7 @@ demenu/
 The GitHub Actions workflow automatically:
 - Builds the Hugo site
 - Deploys to GitHub Pages
-- Makes your site available at `https://YOUR_USERNAME.github.io/demenu/`
+- Makes your site available at `https://YOUR_USERNAME.github.io/demenu-site/`
 
 **To enable GitHub Pages:**
 1. Go to your repository Settings → Pages
