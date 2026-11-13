@@ -1,0 +1,43 @@
+{
+  "categories": [
+    {
+      "id": "antipasti",
+      "name": "Antipasti",
+      "items": [
+        {
+          "name": "Bruschetta",
+          "description": "Tomato, basil, olive oil",
+          "price": 6.5
+        },
+        {
+          "name": "Burrata",
+          "price": 9
+        }
+      ]
+    },
+    {
+      "id": "pasta",
+      "name": "Pasta",
+      "items": [
+        {
+          "name": "Carbonara",
+          "price": 12.5
+        },
+        {
+          "name": "Cacio e pepe",
+          "price": 11
+        }
+      ]
+    },
+    {
+      "id": "dolci",
+      "name": "Dolci",
+      "items": [
+        {
+          "name": "Tiramisù",
+          "price": 6
+        }
+      ]
+    }
+  ]
+}
