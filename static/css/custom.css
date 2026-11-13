@@ -337,11 +337,8 @@ a {
     font-family: var(--font-display);
     font-size: var(--text-3);
     font-weight: var(--weight-bold);
-    line-height: var(--leading-body);
+    line-height: var(--leading-tight);
     letter-spacing: var(--tracking-display);
-    text-decoration: underline wavy var(--color-accent);
-    text-decoration-thickness: var(--space--5);
-    text-underline-offset: var(--space--2);
     overflow-wrap: anywhere;
 }
 
