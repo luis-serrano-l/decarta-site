@@ -1,50 +1,40 @@
-<!DOCTYPE html>
-<html lang="{{ .Site.LanguageCode }}">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menu | {{ .Site.Title }}</title>
-    <link rel="stylesheet" href="{{ "css/custom.css" | relURL }}">
-</head>
-<body>
-    <main>
-        <div class="container">
-            <div id="menu-loading" style="text-align: center; padding: 2rem;">
-                <p>Loading menu...</p>
+{{- /* GitHub Pages serves this file for every unknown path, with the
+       requested URL left in the address bar. That is what makes
+       /menu/<id> work without a page per menu: static/js/menu.js reads
+       the id from the path and loads menus/<id>.json. */ -}}
+{{ define "title" }}Menu{{ end }}
+{{ define "main" }}
+    <div id="menu-app"
+         data-menus-base="{{ "menus/" | relURL }}"
+         data-site-root="{{ site.Home.RelPermalink }}"
+         data-currency="{{ site.Params.currencySymbol }}">
+        <header class="masthead">
+            <h1 class="masthead__title">Menu</h1>
+        </header>
+        <div id="menu-loading" class="skeleton" role="status">
+            <span class="visually-hidden">Loading the menu</span>
+            <div class="skeleton__nav" aria-hidden="true">
+                <span class="bone bone--s"></span>
+                <span class="bone bone--m"></span>
+                <span class="bone bone--s"></span>
             </div>
-            <div id="menu-error" style="display: none; text-align: center; padding: 2rem; color: red;">
-                <p>Error loading menu. Please check your link.</p>
-            </div>
-            {{- /* 404 page - don't render static menu, only show dynamic menu if hash is present */}}
-            <div id="menu-static" style="display: none;"></div>
-            <div id="menu-dynamic" style="display: none;"></div>
+            <div class="skeleton__title" aria-hidden="true"><span class="bone bone--title bone--l"></span></div>
+            {{- range seq 4 }}
+                <div class="skeleton__dish" aria-hidden="true">
+                    <div class="skeleton__row">
+                        <span class="bone {{ if modBool . 2 }}bone--m{{ else }}bone--l{{ end }}"></span>
+                        <span class="bone bone--xs"></span>
+                    </div>
+                    <span class="bone bone--wide"></span>
+                </div>
+            {{- end }}
         </div>
-    </main>
-    {{ partial "footer.html" . }}
-    <script>
-        // Published menus are static files in this site: menus/<id>.json
-        window.MENUS_BASE_URL = {{ "menus/" | relURL }};
-        
-        // Check if this is a menu route - if not, show 404 immediately
-        (function() {
-            const path = window.location.pathname;
-            const menuMatch = path.match(/\/menu\/[A-Za-z0-9]{17}\/?$/);
-            if (!menuMatch) {
-                // Not a menu route - show 404
-                document.addEventListener('DOMContentLoaded', function() {
-                    const menuLoading = document.getElementById('menu-loading');
-                    const menuError = document.getElementById('menu-error');
-                    if (menuLoading) menuLoading.style.display = 'none';
-                    if (menuError) {
-                        menuError.style.display = 'block';
-                        menuError.innerHTML = '<p>Page not found. If you were looking for a menu, please check your link.</p>';
-                    }
-                });
-            }
-            // If it is a menu route, menu.js will handle it
-        })();
-    </script>
-    <script src="{{ "js/menu.js" | relURL }}"></script>
-</body>
-</html>
-
+        <div id="menu-content"></div>
+        <noscript>
+            <div class="notice">
+                <h2 class="notice__title">Turn on JavaScript to see this menu</h2>
+                <p class="notice__body">The menu is loaded by a small script on this page.</p>
+            </div>
+        </noscript>
+    </div>
+{{ end }}

@@ -1,0 +1,39 @@
+{{- /* One menu item. Fields: name, price, and optionally description,
+       image, dietary (text or list of texts) and spicy (text). */ -}}
+{{- $image := "" -}}
+{{- with .image -}}
+    {{- if hasPrefix . "https://" -}}
+        {{- $image = . -}}
+    {{- else if and (hasPrefix . "/") (not (hasPrefix . "//")) -}}
+        {{- $image = strings.TrimPrefix "/" . | relURL -}}
+    {{- end -}}
+{{- end -}}
+{{- $dietary := slice -}}
+{{- with .dietary -}}
+    {{- if reflect.IsSlice . }}{{ $dietary = . }}{{ else }}{{ $dietary = slice . }}{{ end -}}
+{{- end }}
+<li class="dish">
+    {{- with $image }}
+        <div class="dish__image"><img src="{{ . }}" alt="" width="178" height="110" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div>
+    {{- end }}
+    <div class="dish__body">
+        <div class="dish__heading">
+            <h3 class="dish__name">{{ .name }}</h3>
+            <span class="dish__leader" aria-hidden="true"></span>
+            <span class="dish__price">{{ site.Params.currencySymbol }}{{ printf "%.2f" (float .price) }}</span>
+        </div>
+        {{- with .description }}
+            <p class="dish__description">{{ . }}</p>
+        {{- end }}
+        {{- if or $dietary .spicy }}
+            <ul class="badges">
+                {{- range $dietary }}
+                    <li class="badge badge--dietary">{{ . }}</li>
+                {{- end }}
+                {{- with .spicy }}
+                    <li class="badge badge--spicy">{{ . }}</li>
+                {{- end }}
+            </ul>
+        {{- end }}
+    </div>
+</li>

@@ -1,19 +1,10 @@
-{{- define "main" }}
-    <div class="container">
-        {{- if eq .Section "menu" }}
-            <div id="menu-loading" style="text-align: center; padding: 2rem; display: none;">
-                <p>Loading menu...</p>
-            </div>
-            <div id="menu-error" style="display: none; text-align: center; padding: 2rem; color: red;">
-                <p>Error loading menu. Please check your link.</p>
-            </div>
-            <div id="menu-static">
-                {{- partial "menu.html" . }}
-            </div>
-            <div id="menu-dynamic" style="display: none;"></div>
-        {{- else }}
-            <h1>{{ .Title }}</h1>
-            {{ .Content }}
-        {{- end }}
-    </div>
-{{- end }}
+{{ define "main" }}
+    {{- if eq .Section "menu" }}
+        {{- partial "sample-menu.html" . }}
+    {{- else }}
+        <header class="masthead">
+            <h1 class="masthead__title">{{ .Title }}</h1>
+        </header>
+        <div class="prose">{{ .Content }}</div>
+    {{- end }}
+{{ end }}
